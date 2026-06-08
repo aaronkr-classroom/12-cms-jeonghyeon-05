@@ -1,8 +1,21 @@
 <?php
-// 슬라이드 48
+//슬라이드 56
 declare(strict_types =1); // 엄격한 타입 사용
 require_once 'includes/database-connection.php'; //PDO객체
 require_once 'includes/functions.php';
+
+//--------
+$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT); //아이디 유효성 확인
+if (!$id) {
+  include 'page-not-found-php';
+}
+
+$sql = "SELECT forename, surname, joined, picture, FROM member WHERE id=:id;";
+$member = pdo($pdo, $spl, [$id])->fetch();
+if (!$member) { 
+  include 'page-not-found-php';
+}
+//--------
 
 $sql = "SELECT a.id, a.title, a.summary, a.category_id, a.member_id,
                c.name As category,
@@ -13,20 +26,26 @@ $sql = "SELECT a.id, a.title, a.summary, a.category_id, a.member_id,
           JOIN category     AS c ON a.category_id = c.id
           JOIN member       AS m ON a.member_id   = m.id
         LEFT JOIN image     AS i ON a.image_id    = i.id
-        WHERE a.published = 1
-        ORDER BY a.id DESC
-        LIMIT 6;"; // 최근 기사 가져오는 SQL
-$articles = pdo($pdo, $sql)->fetchAll(); //기사 6개 불러오기
+        WHERE a.member_id = :id AND a.published = 1
+        ORDER BY a.id DESC;"; // 최근 기사 가져오는 SQL
+$articles = $article = pdo($pdo, $sql, [$id])->fetchAll(); //기사 6개 불러오기
 
 $sql = "SELECT id, name FROM category WHERE navigation = 1;";
 $navigation = pdo($pdo, $sql)->fetchall();
 
 $section      = '';
-$title        = 'Creative Folk'; // HTML <title> tag
-$description  = 'A collection of creatives for hire'; //메타 description
+$title        = $member['forename'] . ' ' . $member['surname']; // HTML <title> tag
+$description  = $title . ' on Creative Folk'; //메타 description
 ?>
 <?php include 'includes/header.php'; ?>
-  <main class="container grid" id="content">
+  <main class="container" id="content">
+    <section class="header">
+      <h1><?= html_escape($member['forename'] . ' ' . $member['surname']) ?></h1>
+      <p class="member"><b>Member since:</b> <?= format_date($member['joined']) ?></p>
+      <img src="uploads/<?= html_escape($member['picture'] ?? 'member.png') ?>"
+           alt="<?= html_escape($member['forename']) ?>" class="profile"><br>
+    </section>
+    <section class="grid">
     <?php foreach ($articles as $article) { ?>
       <article class="summary">
         <a href="article.php?id=<?= $article['id'] ?>">
@@ -43,5 +62,6 @@ $description  = 'A collection of creatives for hire'; //메타 description
         </p>
       </article>
     <?php } ?>
+    </section>
   </main>
 <?php include 'includes/footer.php'; ?>
